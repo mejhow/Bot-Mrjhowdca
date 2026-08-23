@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Pionex DCA - Adaptive Volatility & Manual Tester</title>
+  <title>Pionex DCA - Margin Accumulation & Real Step Coverage</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background-color: #121318; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 12px; display: flex; justify-content: center; }
@@ -24,7 +24,8 @@
     input, select { width: 100%; padding: 8px; background: #2b2f3a; border: none; color: #fff; border-radius: 6px; font-size: 13px; }
     button { width: 100%; padding: 10px; background: #0ecb81; border: none; color: white; font-weight: bold; font-size: 12px; border-radius: 8px; cursor: pointer; margin-top: 4px; }
     .btn-opt { background: #f3ba2f; color: #121318; font-weight: bold; }
-    .btn-test-manual { background: #3b4050; border: 1px solid #0ecb81; color: #0ecb81; margin-top: 6px; }
+    .btn-test-manual { background: #2b2f3a; border: 1px solid #0ecb81; color: #0ecb81; font-weight: bold; margin-top: 6px; }
+    .btn-test-manual:hover { background: #0ecb81; color: #fff; }
     .stats { margin-top: 12px; background: #181a20; padding: 10px; border-radius: 8px; font-size: 11px; line-height: 1.6; }
     .row { display: flex; justify-content: space-between; }
     .val { font-weight: bold; color: #fff; }
@@ -64,7 +65,7 @@
     <div class="tab" id="tabShort" onclick="setDirection('Encurtar')">Encurtar (Short)</div>
   </div>
 
-  <div class="section-title" style="color: #f3ba2f;">OTIMIZADOR ADAPTATIVO & 4º PERFIL (GARANTIDO)</div>
+  <div class="section-title" style="color: #f3ba2f;">OTIMIZADOR ADAPTATIVO & ACÚMULO DE MARGEM</div>
   <div class="grid">
     <div class="field">
       <label>Histórico Otimização (Dias)</label>
@@ -72,7 +73,7 @@
     </div>
     <div class="field">
       <label>&nbsp;</label>
-      <button onclick="runOptimization()" class="btn-opt">Analisar & Gerar 4 Perfis</button>
+      <button onclick="runOptimization()" class="btn-opt">Gerar 4 Perfis de Mercado</button>
     </div>
   </div>
 
@@ -83,11 +84,11 @@
   <div class="section-title">GRÁFICO DE OSCILAÇÃO E FECHAMENTOS DE CICLO</div>
   <canvas id="chartCanvas"></canvas>
 
-  <div class="section-title">CONFIGURAÇÃO ATIVA (MANUAL / TESTE)</div>
+  <div class="section-title">CONFIGURAÇÃO ATIVA (TESTE MANUAL)</div>
   <div class="grid">
     <div class="field">
       <label>Queda Adição (%)</label>
-      <input type="number" id="addPricePct" value="3.2" step="0.1" oninput="onManualParamChange()">
+      <input type="number" id="addPricePct" value="2.0" step="0.1" oninput="onManualParamChange()">
     </div>
     <div class="field">
       <label>Take Profit (%)</label>
@@ -98,7 +99,7 @@
   <div class="grid">
     <div class="field">
       <label>Ordens Segurança (Max)</label>
-      <input type="number" id="maxSafetyOrders" value="10" oninput="onManualParamChange()">
+      <input type="number" id="maxSafetyOrders" value="5" oninput="onManualParamChange()">
     </div>
     <div class="field">
       <label>Alavancagem (1x - 100x)</label>
@@ -123,13 +124,13 @@
     <input type="number" id="baseInvestment" value="20" oninput="onManualParamChange()">
   </div>
 
-  <button class="btn-test-manual" onclick="runManualSimulationButton()">Executar Teste Manual Destes Parâmetros</button>
+  <button class="btn-test-manual" onclick="runManualSimulationButton()">▶ Executar Teste Manual com Meus Ajustes</button>
 
   <div class="stats">
     <div class="row"><span>Ciclos Fechados no Período:</span><span class="val highlight" id="activeCycles">0</span></div>
     <div class="row"><span>Resultado da Simulação:</span><span class="val" id="activeNetProfit">$0.00</span></div>
-    <div class="row"><span>Cobertura Total de Queda (Y%):</span><span class="val" id="gridDropCoverage">0.00%</span></div>
-    <div class="row"><span>Liquidação Final Após DCA:</span><span class="val danger" id="finalLiqPrice">--</span></div>
+    <div class="row"><span>Cobertura Total de Queda (Real):</span><span class="val" id="gridDropCoverage">0.00%</span></div>
+    <div class="row"><span>Liquidação Final (Sem Lucro Acumulado):</span><span class="val danger" id="finalLiqPrice">--</span></div>
   </div>
 </div>
 
@@ -201,6 +202,7 @@
     runOptimization();
   }
 
+  // CÁLCULO PRECISO DE COBERTURA DE QUEDA E DISTÂNCIA DE ORDENS
   function calculateGridCoverage() {
     if (currentPrice === 0) return;
     const baseInv = parseFloat(document.getElementById('baseInvestment').value);
@@ -211,28 +213,32 @@
     const stepMult = parseFloat(document.getElementById('stepMult').value);
 
     let price = currentPrice;
-    let currentStep = addPct;
+    let currentStepPct = addPct;
     let currentVol = baseInv * lev;
     let totalQty = currentVol / price;
     let totalNotional = currentVol;
 
+    // Calcula a posição e o preço final após preencher todas as SOs
     for (let i = 1; i <= maxSo; i++) {
-      price = direction === 'Longo' ? price * (1 - currentStep) : price * (1 + currentStep);
+      price = direction === 'Longo' ? price * (1 - currentStepPct) : price * (1 + currentStepPct);
       currentVol *= volMult;
       let qty = currentVol / price;
       totalQty += qty;
       totalNotional += currentVol;
-      currentStep *= stepMult;
+      currentStepPct *= stepMult;
     }
 
     let projAvgPrice = totalNotional / totalQty;
-    let dropCoverage = Math.abs((price - currentPrice) / currentPrice) * 100;
+    
+    // Cobertura total real em % calculada do preço inicial até a última ordem
+    let realDropCoverage = Math.abs((price - currentPrice) / currentPrice) * 100;
+    
     let maintenanceMargin = 0.005;
     let finalLiq = direction === 'Longo' 
       ? projAvgPrice * (1 - (1 / lev) + maintenanceMargin)
       : projAvgPrice * (1 + (1 / lev) - maintenanceMargin);
 
-    document.getElementById('gridDropCoverage').innerText = dropCoverage.toFixed(2) + "%";
+    document.getElementById('gridDropCoverage').innerText = realDropCoverage.toFixed(2) + "%";
     document.getElementById('finalLiqPrice').innerText = finalLiq > 0 ? finalLiq.toFixed(3) : "Seguro";
   }
 
@@ -248,9 +254,12 @@
     return trs.reduce((a, b) => a + b, 0) / trs.length;
   }
 
+  // SIMULAÇÃO COM ACÚMULO REINVESTIDO DE MARGEM DOS CICLOS
   function simulateStrategy(candles, lev, addPct, tpPct, maxSo, volMult, stepMult = 1.0) {
     let initialInvestment = parseFloat(document.getElementById('baseInvestment').value) || 20;
-    let balance = initialInvestment;
+    
+    // O Saldo ( balance ) cresce a cada lucro acumulado!
+    let balance = initialInvestment; 
     let isLiquidated = false;
     let cycles = 0;
     let liqDate = "";
@@ -276,6 +285,7 @@
         continue;
       }
 
+      // Preço de Liquidação Dinâmico considerando o Saldo Acumulado (balance)
       let notional = btState.totalQty * btState.avgPrice;
       let liq = direction === 'Longo' 
         ? btState.avgPrice - ((balance - (notional * 0.005)) / (notional / btState.avgPrice))
@@ -289,16 +299,18 @@
         break;
       }
 
+      // Fechamento com Take Profit
       let hitTP = direction === 'Longo' ? highPrice >= btState.tpPrice : lowPrice <= btState.tpPrice;
       if (hitTP) {
         let profit = Math.abs(btState.tpPrice - btState.avgPrice) * btState.totalQty;
-        balance += profit;
+        balance += profit; // O LUCRO É INCORPORADO AO SALDO TOTAL DA CONTA
         cycles++;
         cycleEvents.push({ type: 'tp', index: idx, price: btState.tpPrice });
         btState.inPosition = false;
         continue;
       }
 
+      // Acionamento de Ordem de Segurança
       let hitSO = direction === 'Longo' ? lowPrice <= btState.nextAddPrice : highPrice >= btState.nextAddPrice;
       if (hitSO && btState.soFilled < maxSo) {
         btState.soFilled++;
@@ -307,6 +319,7 @@
         let totalCost = (btState.avgPrice * btState.totalQty) + (closePrice * newQty);
         btState.totalQty += newQty;
         btState.avgPrice = totalCost / btState.totalQty;
+        
         btState.lastStepPct *= stepMult;
         
         btState.nextAddPrice = direction === 'Longo' ? closePrice * (1 - btState.lastStepPct) : closePrice * (1 + btState.lastStepPct);
@@ -324,7 +337,7 @@
     const days = parseInt(document.getElementById('optDays').value);
     const container = document.getElementById('profilesContainer');
     container.style.display = 'flex';
-    container.innerHTML = '<div style="font-size: 11px; color: #848e9c; text-align: center;">Mapeando perfis de sobrevivência e oscilação...</div>';
+    container.innerHTML = '<div style="font-size: 11px; color: #848e9c; text-align: center;">Mapeando oscilações com acúmulo de margem...</div>';
 
     try {
       let interval = days <= 30 ? "1h" : "4h";
@@ -335,14 +348,13 @@
       let baseAdd = Math.max(0.012, atr * 1.5);
       
       const profiles = {
-        conservador: { lev: [2, 3], addPct: [baseAdd * 2.0], tp: [baseAdd * 0.8], maxSo: [10], volMult: [1.1] },
-        moderado:    { lev: [4, 5], addPct: [baseAdd * 1.4], tp: [baseAdd * 1.1], maxSo: [8],  volMult: [1.2] },
-        agressivo:   { lev: [8, 10], addPct: [baseAdd * 0.8], tp: [baseAdd * 1.5], maxSo: [5],  volMult: [1.3] }
+        conservador: { lev: [2, 3], addPct: [baseAdd * 2.0], tp: [baseAdd * 0.8], maxSo: [8], volMult: [1.1] },
+        moderado:    { lev: [4, 5], addPct: [baseAdd * 1.4], tp: [baseAdd * 1.1], maxSo: [6], volMult: [1.2] },
+        agressivo:   { lev: [8, 10], addPct: [baseAdd * 0.8], tp: [baseAdd * 1.5], maxSo: [4], volMult: [1.3] }
       };
 
       profilePresets = {};
 
-      // 1. Gera os 3 perfis tradicionais
       for (let pKey of ['conservador', 'moderado', 'agressivo']) {
         let pDef = profiles[pKey];
         let bestCandidate = null;
@@ -364,11 +376,11 @@
         profilePresets[pKey] = bestCandidate || simulateStrategy(cachedCandles, 3, baseAdd*2, baseAdd, 8, 1.1);
       }
 
-      // 2. 4º Perfil: O Sobrevivente Absoluto (Varredura Ampla por parâmetros seguros garantidos)
+      // 4º Perfil Sobrevivente Absoluto
       let survivorCandidate = null;
-      const testLevs = [1, 2, 3, 4];
-      const testAdds = [baseAdd * 2.0, baseAdd * 3.0, 0.04, 0.06];
-      const testTps  = [0.01, 0.015, 0.02];
+      const testLevs = [1, 2, 3];
+      const testAdds = [baseAdd * 2.5, baseAdd * 3.5, 0.05];
+      const testTps  = [0.01, 0.012];
       const testSos  = [8, 10, 12];
 
       for (let lev of testLevs) {
@@ -385,10 +397,9 @@
           }
         }
       }
-      
-      // Fallback caso encontre um cenário extremamente volátil sem 100% de blindagem
+
       if (!survivorCandidate) {
-        survivorCandidate = simulateStrategy(cachedCandles, 2, 0.05, 0.015, 12, 1.0);
+        survivorCandidate = simulateStrategy(cachedCandles, 2, 0.05, 0.01, 12, 1.0);
       }
       profilePresets['sobrevivente'] = survivorCandidate;
 
@@ -405,10 +416,10 @@
     container.innerHTML = "";
 
     const profileNames = {
-      conservador: "CONSERVADOR (Grid Seguro)",
-      moderado: "MODERADO (Equilibrado)",
-      agressivo: "AGRESSIVO (Alta Volatilidade)",
-      sobrevivente: "SOBREVIVENTE (100% Imune a Liquidação)"
+      conservador: "1. CONSERVADOR (Grid Seguro)",
+      moderado: "2. MODERADO (Equilibrado)",
+      agressivo: "3. AGRESSIVO (Alta Volatilidade)",
+      sobrevivente: "4. SOBREVIVENTE (100% Imune à Liquidação)"
     };
 
     for (let key of ['conservador', 'moderado', 'agressivo', 'sobrevivente']) {
@@ -434,7 +445,7 @@
           • <b>Ajustes:</b> ${p.lev}x | Queda: ${p.addPct.toFixed(2)}% | TP: ${p.tpPct.toFixed(2)}% | SOs: ${p.maxSo} | Vol: ${p.volMult}x<br>
           ${statusHTML}
         </div>
-        <button class="btn-apply" onclick="applyPreset('${key}')">Aplicar Parâmetros</button>
+        <button class="btn-apply" onclick="applyPreset('${key}')">Carregar no Testador</button>
       `;
       container.appendChild(pCard);
     }
@@ -479,7 +490,6 @@
 
   function runManualSimulationButton() {
     onManualParamChange();
-    alert("Teste manual executado! Veja o resultado atualizado no painel de estatísticas e no gráfico de ciclos.");
   }
 
   function renderChart(candles, events) {
