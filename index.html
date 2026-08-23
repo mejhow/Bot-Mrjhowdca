@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Pionex DCA - Fixed Engine Backtest</title>
+  <title>Pionex DCA - Motor Real de Liquidação</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background-color: #121318; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 12px; display: flex; justify-content: center; }
@@ -65,7 +65,7 @@
     <div class="tab" id="tabShort" onclick="setDirection('Encurtar')">Encurtar (Short)</div>
   </div>
 
-  <div class="section-title" style="color: #f3ba2f;">OTIMIZADOR ADAPTATIVO & MOTOR CORRIGIDO</div>
+  <div class="section-title" style="color: #f3ba2f;">OTIMIZADOR DCA REALISTA</div>
   <div class="grid">
     <div class="field">
       <label>Histórico Otimização (Dias)</label>
@@ -73,7 +73,7 @@
     </div>
     <div class="field">
       <label>&nbsp;</label>
-      <button onclick="runOptimization()" class="btn-opt">Gerar 4 Perfis de Mercado</button>
+      <button onclick="runOptimization()" class="btn-opt">Gerar Perfis de Mercado</button>
     </div>
   </div>
 
@@ -81,7 +81,7 @@
     <div id="statusOptText" style="font-size: 11px; color: #848e9c; text-align: center;">Aguardando início...</div>
   </div>
 
-  <div class="section-title">GRÁFICO DE OSCILAÇÃO E FECHAMENTOS DE CICLO</div>
+  <div class="section-title">GRÁFICO DE HISTÓRICO E PONTOS DE TP/LIQ</div>
   <canvas id="chartCanvas"></canvas>
 
   <div class="section-title">CONFIGURAÇÃO ATIVA (TESTE MANUAL)</div>
@@ -103,7 +103,7 @@
     </div>
     <div class="field">
       <label>Alavancagem (1x - 100x)</label>
-      <input type="number" id="leverage" value="5" min="1" max="100" oninput="onManualParamChange()">
+      <input type="number" id="leverage" value="3" min="1" max="100" oninput="onManualParamChange()">
     </div>
   </div>
 
@@ -111,7 +111,7 @@
   <div class="grid">
     <div class="field">
       <label>Mult. Volume (Martingale)</label>
-      <input type="number" id="volMult" value="1.2" step="0.1" oninput="onManualParamChange()">
+      <input type="number" id="volMult" value="1.1" step="0.1" oninput="onManualParamChange()">
     </div>
     <div class="field">
       <label>Mult. Passo de Queda</label>
@@ -124,13 +124,13 @@
     <input type="number" id="baseInvestment" value="20" oninput="onManualParamChange()">
   </div>
 
-  <button class="btn-test-manual" onclick="runManualSimulationButton()">▶ Executar Teste Manual com Meus Ajustes</button>
+  <button class="btn-test-manual" onclick="runManualSimulationButton()">▶ Executar Teste Manual</button>
 
   <div class="stats">
     <div class="row"><span>Ciclos Fechados no Período:</span><span class="val highlight" id="activeCycles">0</span></div>
     <div class="row"><span>Resultado da Simulação:</span><span class="val" id="activeNetProfit">$0.00</span></div>
-    <div class="row"><span>Cobertura Total do Grid (Real):</span><span class="val" id="gridDropCoverage">0.00%</span></div>
-    <div class="row"><span>Preço de Liquidação Atual:</span><span class="val danger" id="finalLiqPrice">--</span></div>
+    <div class="row"><span>Cobertura Teórica de Queda:</span><span class="val" id="gridDropCoverage">0.00%</span></div>
+    <div class="row"><span>Status da Carteira:</span><span class="val danger" id="finalLiqPrice">--</span></div>
   </div>
 </div>
 
@@ -232,26 +232,16 @@
     return trs.reduce((a, b) => a + b, 0) / trs.length;
   }
 
-  // MOTOR CORRIGIDO DE SIMULAÇÃO DCA FUTUROS
+  // SIMULAÇÃO DE CORREÇÃO COM CAP DE MARGEM E LIQUIDAÇÃO REAL DE FUTUROS
   function simulateStrategy(candles, lev, addPct, tpPct, maxSo, volMult, stepMult = 1.0) {
-    let baseInvestment = parseFloat(document.getElementById('baseInvestment').value) || 20;
-    let totalWallet = baseInvestment; 
+    let initialInvestment = parseFloat(document.getElementById('baseInvestment').value) || 20;
+    let balance = initialInvestment;
     let isLiquidated = false;
     let cycles = 0;
     let liqDate = "";
     let cycleEvents = [];
 
-    let pos = { 
-      inPos: false, 
-      avgPrice: 0, 
-      totalQty: 0, 
-      usedMargin: 0, 
-      soFilled: 0, 
-      nextAddPrice: 0, 
-      tpPrice: 0, 
-      lastVol: 0, 
-      lastStepPct: 0 
-    };
+    let bt = { inPosition: false, avgPrice: 0, totalQty: 0, usedMargin: 0, soFilled: 0, nextAddPrice: 0, tpPrice: 0, lastVol: 0, lastStepPct: 0 };
 
     for (let idx = 0; idx < candles.length; idx++) {
       let c = candles[idx];
@@ -259,75 +249,77 @@
       let highPrice = parseFloat(c[2]);
       let closePrice = parseFloat(c[4]);
 
-      // ABERTURA DE NOVA BASE ORDER NO INÍCIO OU APÓS O TAKE PROFIT
-      if (!pos.inPos) {
-        pos.inPos = true;
-        pos.avgPrice = closePrice;
-        pos.lastVol = baseInvestment * lev; // A Ordem Base SEMPRE usa o valor base fixado
-        pos.totalQty = pos.lastVol / closePrice;
-        pos.usedMargin = baseInvestment; 
-        pos.soFilled = 0;
-        pos.lastStepPct = addPct;
-        
-        pos.nextAddPrice = direction === 'Longo' ? closePrice * (1 - addPct) : closePrice * (1 + addPct);
-        pos.tpPrice = direction === 'Longo' ? closePrice * (1 + (tpPct / lev)) : closePrice * (1 - (tpPct / lev));
+      // ABRIR NOVO CICLO
+      if (!bt.inPosition) {
+        bt.inPosition = true;
+        bt.avgPrice = closePrice;
+        bt.lastVol = initialInvestment * lev;
+        bt.totalQty = bt.lastVol / closePrice;
+        bt.usedMargin = initialInvestment;
+        bt.soFilled = 0;
+        bt.lastStepPct = addPct;
+
+        bt.nextAddPrice = direction === 'Longo' ? closePrice * (1 - addPct) : closePrice * (1 + addPct);
+        bt.tpPrice = direction === 'Longo' ? closePrice * (1 + (tpPct / lev)) : closePrice * (1 - (tpPct / lev));
         continue;
       }
 
-      // CÁLCULO PRECISO DO PREÇO DE LIQUIDAÇÃO
-      // Preço onde as perdas não realizadas igualam a margem livre restante na carteira
-      let unrealizedPnlMin = direction === 'Longo' 
-        ? (lowPrice - pos.avgPrice) * pos.totalQty 
-        : (pos.avgPrice - highPrice) * pos.totalQty;
+      // PREÇO REAL DE LIQUIDAÇÃO
+      // A liquidação só acontece quando o drawdown consome toda a margem alocada + banca extra
+      let maintenanceMarginPct = 0.005; // 0.5% padrão da Binance/Pionex
+      let currentLiqPrice = direction === 'Longo' 
+        ? bt.avgPrice * (1 - (1 / lev) + maintenanceMarginPct)
+        : bt.avgPrice * (1 + (1 / lev) - maintenanceMarginPct);
 
-      let remainingBalance = totalWallet - pos.usedMargin + unrealizedPnlMin;
-
-      if (remainingBalance <= 0) {
+      let isLiq = direction === 'Longo' ? lowPrice <= currentLiqPrice : highPrice >= currentLiqPrice;
+      if (isLiq) {
         isLiquidated = true;
         liqDate = new Date(c[0]).toLocaleDateString('pt-BR');
-        totalWallet = 0;
-        cycleEvents.push({ type: 'liq', index: idx, price: closePrice });
+        balance = 0;
+        cycleEvents.push({ type: 'liq', index: idx, price: currentLiqPrice });
         break;
       }
 
-      // TESTE DE TAKE PROFIT
-      let hitTP = direction === 'Longo' ? highPrice >= pos.tpPrice : lowPrice <= pos.tpPrice;
+      // TAKE PROFIT (FECHA CICLO E ZERA)
+      let hitTP = direction === 'Longo' ? highPrice >= bt.tpPrice : lowPrice <= bt.tpPrice;
       if (hitTP) {
-        let pnl = Math.abs(pos.tpPrice - pos.avgPrice) * pos.totalQty;
-        totalWallet += pnl; // Lucro direto no saldo
+        let profit = Math.abs(bt.tpPrice - bt.avgPrice) * bt.totalQty;
+        balance += profit;
         cycles++;
-        cycleEvents.push({ type: 'tp', index: idx, price: pos.tpPrice });
-        
-        pos.inPos = false; // Zera a Posição para reiniciar no próximo candle
+        cycleEvents.push({ type: 'tp', index: idx, price: bt.tpPrice });
+
+        bt.inPosition = false; // RESETA O CICLO
         continue;
       }
 
-      // TESTE DE ORDEM DE SEGURANÇA (DCA)
-      let hitSO = direction === 'Longo' ? lowPrice <= pos.nextAddPrice : highPrice >= pos.nextAddPrice;
-      if (hitSO && pos.soFilled < maxSo) {
-        pos.soFilled++;
-        pos.lastVol *= volMult;
-        let addMarginNeeded = pos.lastVol / lev;
+      // ORDEM DE SEGURANÇA (DCA)
+      let hitSO = direction === 'Longo' ? lowPrice <= bt.nextAddPrice : highPrice >= bt.nextAddPrice;
+      if (hitSO && bt.soFilled < maxSo) {
+        let nextVolNeeded = bt.lastVol * volMult;
+        let marginNeededForNextSO = nextVolNeeded / lev;
 
-        // Se houver saldo para cobrir a margem da nova ordem
-        if ((totalWallet - pos.usedMargin) >= addMarginNeeded) {
-          pos.usedMargin += addMarginNeeded;
-          let newQty = pos.lastVol / closePrice;
-          let totalCost = (pos.avgPrice * pos.totalQty) + (closePrice * newQty);
-          
-          pos.totalQty += newQty;
-          pos.avgPrice = totalCost / pos.totalQty;
-          pos.lastStepPct *= stepMult;
+        // SE O SALDO DISPONÍVEL COBRIR A MARGEM DA NOVA ORDEM, ELA É EXECUTADA
+        if ((balance - bt.usedMargin) >= marginNeededForNextSO) {
+          bt.soFilled++;
+          bt.lastVol = nextVolNeeded;
+          bt.usedMargin += marginNeededForNextSO;
 
-          pos.nextAddPrice = direction === 'Longo' ? closePrice * (1 - pos.lastStepPct) : closePrice * (1 + pos.lastStepPct);
-          pos.tpPrice = direction === 'Longo' ? pos.avgPrice * (1 + (tpPct / lev)) : pos.avgPrice * (1 - (tpPct / lev));
+          let newQty = bt.lastVol / closePrice;
+          let totalCost = (bt.avgPrice * bt.totalQty) + (closePrice * newQty);
+
+          bt.totalQty += newQty;
+          bt.avgPrice = totalCost / bt.totalQty;
+          bt.lastStepPct *= stepMult;
+
+          bt.nextAddPrice = direction === 'Longo' ? closePrice * (1 - bt.lastStepPct) : closePrice * (1 + bt.lastStepPct);
+          bt.tpPrice = direction === 'Longo' ? bt.avgPrice * (1 + (tpPct / lev)) : bt.avgPrice * (1 - (tpPct / lev));
         }
       }
     }
 
     return {
       lev, addPct: addPct * 100, tpPct: tpPct * 100, maxSo, volMult, stepMult,
-      netProfit: totalWallet - baseInvestment, cycles, isLiquidated, liqDate, cycleEvents
+      netProfit: balance - initialInvestment, cycles, isLiquidated, liqDate, cycleEvents
     };
   }
 
@@ -335,24 +327,23 @@
     const days = parseInt(document.getElementById('optDays').value);
     const container = document.getElementById('profilesContainer');
     container.style.display = 'flex';
-    container.innerHTML = '<div style="font-size: 11px; color: #848e9c; text-align: center;">Carregando histórico Binance e executando simulação...</div>';
+    container.innerHTML = '<div style="font-size: 11px; color: #848e9c; text-align: center;">Carregando histórico e calculando ciclos...</div>';
 
     try {
-      let interval = "1h";
-      if (days > 30) interval = "4h";
-      if (days > 120) interval = "1d";
-
-      let totalLimit = Math.min(1000, Math.ceil(days * (interval === "1d" ? 1 : interval === "4h" ? 6 : 24)));
-      let res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${currentPair}&interval=${interval}&limit=${totalLimit}`);
+      // Usa intervalo de 2h ou 4h para manter alta precisão nos testes de até 365 dias
+      let interval = days <= 30 ? "1h" : "2h";
+      let limit = Math.min(1000, Math.ceil(days * (interval === "2h" ? 12 : 24)));
+      
+      let res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${currentPair}&interval=${interval}&limit=${limit}`);
       cachedCandles = await res.json();
 
       let atr = calculateATR(cachedCandles);
-      let baseAdd = Math.max(0.012, atr * 1.5);
+      let baseAdd = Math.max(0.015, atr * 1.2);
 
       const profiles = {
-        conservador: { lev: [2, 3], addPct: [baseAdd * 2.0], tp: [baseAdd * 0.8], maxSo: [8], volMult: [1.1] },
-        moderado:    { lev: [4, 5], addPct: [baseAdd * 1.4], tp: [baseAdd * 1.1], maxSo: [6], volMult: [1.2] },
-        agressivo:   { lev: [8, 10], addPct: [baseAdd * 0.8], tp: [baseAdd * 1.5], maxSo: [4], volMult: [1.3] }
+        conservador: { lev: [2], addPct: [baseAdd * 1.5], tp: [baseAdd * 0.8], maxSo: [10], volMult: [1.1] },
+        moderado:    { lev: [3], addPct: [baseAdd * 1.2], tp: [baseAdd * 1.0], maxSo: [8], volMult: [1.1] },
+        agressivo:   { lev: [5], addPct: [baseAdd * 0.9], tp: [baseAdd * 1.2], maxSo: [5], volMult: [1.2] }
       };
 
       profilePresets = {};
@@ -375,21 +366,21 @@
             }
           }
         }
-        profilePresets[pKey] = bestCandidate || simulateStrategy(cachedCandles, 3, baseAdd*2, baseAdd, 8, 1.1);
+        profilePresets[pKey] = bestCandidate || simulateStrategy(cachedCandles, 2, baseAdd*1.5, baseAdd, 8, 1.1);
       }
 
-      // 4º PERFIL: SOBREVIVENTE
+      // PERFIL SOBREVIVENTE ABSOLUTO (Foco em Baixa Alavancagem e Alta Cobertura)
       let survivorCandidate = null;
-      const testLevs = [1, 2, 3];
-      const testAdds = [baseAdd * 2.5, baseAdd * 3.5, 0.05];
+      const testLevs = [1, 2];
+      const testAdds = [0.03, 0.04, 0.05];
       const testTps  = [0.01, 0.012];
-      const testSos  = [8, 10, 12];
+      const testSos  = [10, 12, 15];
 
       for (let lev of testLevs) {
         for (let addPct of testAdds) {
           for (let tpPct of testTps) {
             for (let maxSo of testSos) {
-              let resTest = simulateStrategy(cachedCandles, lev, addPct, tpPct, maxSo, 1.1);
+              let resTest = simulateStrategy(cachedCandles, lev, addPct, tpPct, maxSo, 1.05);
               if (!resTest.isLiquidated) {
                 if (!survivorCandidate || resTest.cycles > survivorCandidate.cycles) {
                   survivorCandidate = resTest;
@@ -401,7 +392,7 @@
       }
 
       if (!survivorCandidate) {
-        survivorCandidate = simulateStrategy(cachedCandles, 2, 0.05, 0.01, 12, 1.0);
+        survivorCandidate = simulateStrategy(cachedCandles, 1, 0.04, 0.01, 12, 1.0);
       }
       profilePresets['sobrevivente'] = survivorCandidate;
 
@@ -418,10 +409,10 @@
     container.innerHTML = "";
 
     const profileNames = {
-      conservador: "1. CONSERVADOR (Grid Seguro)",
+      conservador: "1. CONSERVADOR (Baixo Risco)",
       moderado: "2. MODERADO (Equilibrado)",
-      agressivo: "3. AGRESSIVO (Alta Volatilidade)",
-      sobrevivente: "4. SOBREVIVENTE (100% Imune à Liquidação)"
+      agressivo: "3. AGRESSIVO (Alta Frequência)",
+      sobrevivente: "4. SOBREVIVENTE (Resistente à Quedas)"
     };
 
     for (let key of ['conservador', 'moderado', 'agressivo', 'sobrevivente']) {
@@ -482,11 +473,11 @@
     let initial = parseFloat(document.getElementById('baseInvestment').value) || 20;
     if (res.isLiquidated) {
       document.getElementById('activeNetProfit').innerHTML = `<span class="danger">LIQUIDADO (-$${initial.toFixed(2)}) em ${res.liqDate}</span>`;
-      document.getElementById('finalLiqPrice').innerText = "ATINGIDO (" + res.liqDate + ")";
+      document.getElementById('finalLiqPrice').innerText = "LIQUIDADO";
     } else {
       let returnPct = ((res.netProfit / initial) * 100).toFixed(1);
       document.getElementById('activeNetProfit').innerHTML = `<span style="color:#0ecb81;">+$${res.netProfit.toFixed(2)} (+${returnPct}%)</span>`;
-      document.getElementById('finalLiqPrice').innerText = "NÃO LIQUIDADO";
+      document.getElementById('finalLiqPrice').innerText = "CONTA PROTEGIDA";
     }
 
     renderChart(cachedCandles, res.cycleEvents);
