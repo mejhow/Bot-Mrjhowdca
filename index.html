@@ -3,29 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Pionex DCA Bot & Stocks Futures Simulator</title>
+  <title>Simulador Pionex DCA & Futures</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background-color: #121318; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 12px; display: flex; justify-content: center; }
     .card { background: #1c1e24; border-radius: 16px; padding: 16px; width: 100%; max-width: 520px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
     .header { margin-bottom: 12px; }
-    .pair-search-container { display: flex; gap: 6px; margin-bottom: 6px; }
-    .search-input { background: #2b2f3a; border: 1px solid #3b4050; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 13px; width: 40%; }
-    .title-select { background: #2b2f3a; color: #fff; border: 1px solid #3b4050; font-size: 13px; font-weight: bold; padding: 8px; border-radius: 6px; width: 60%; }
-    .price-display { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; background: #181a20; padding: 8px 12px; border-radius: 8px; }
+    .pair-container { margin-bottom: 8px; }
+    .title-select { background: #2b2f3a; color: #fff; border: 1px solid #3b4050; font-size: 14px; font-weight: bold; padding: 10px; border-radius: 8px; width: 100%; -webkit-appearance: none; }
+    .price-display { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; background: #181a20; padding: 10px 12px; border-radius: 8px; }
     .price { font-size: 16px; font-weight: bold; color: #0ecb81; }
     .tabs { display: flex; background: #2b2f3a; border-radius: 8px; padding: 2px; margin-bottom: 12px; }
-    .tab { flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 12px; color: #848e9c; }
+    .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 12px; color: #848e9c; }
     .tab.active { background: #0ecb81; color: #fff; }
     .section-title { font-size: 11px; font-weight: bold; color: #0ecb81; margin: 12px 0 6px 0; border-bottom: 1px solid #2b2f3a; padding-bottom: 4px; text-transform: uppercase; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .field { margin-bottom: 8px; }
     label { font-size: 10px; color: #848e9c; display: block; margin-bottom: 2px; }
     input, select { width: 100%; padding: 8px; background: #2b2f3a; border: 1px solid #3b4050; color: #fff; border-radius: 6px; font-size: 13px; }
-    button { width: 100%; padding: 10px; background: #0ecb81; border: none; color: white; font-weight: bold; font-size: 12px; border-radius: 8px; cursor: pointer; margin-top: 4px; }
+    button { width: 100%; padding: 12px; background: #0ecb81; border: none; color: white; font-weight: bold; font-size: 12px; border-radius: 8px; cursor: pointer; margin-top: 4px; }
     .btn-opt { background: #f3ba2f; color: #121318; font-weight: bold; }
     .btn-test-manual { background: #2b2f3a; border: 1px solid #0ecb81; color: #0ecb81; font-weight: bold; margin-top: 6px; }
-    .btn-test-manual:hover { background: #0ecb81; color: #fff; }
     .stats { margin-top: 12px; background: #181a20; padding: 10px; border-radius: 8px; font-size: 11px; line-height: 1.6; }
     .row { display: flex; justify-content: space-between; }
     .val { font-weight: bold; color: #fff; }
@@ -38,7 +36,7 @@
     .profile-card.agressivo { border-left: 4px solid #f6465d; }
     .profile-card.sobrevivente { border-left: 4px solid #3b82f6; }
     .profile-title { font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 4px; }
-    .btn-apply { background: #2b2f3a; border: 1px solid #3b4050; color: #fff; padding: 6px 8px; font-size: 11px; margin-top: 6px; cursor: pointer; border-radius: 4px; width: 100%; }
+    .btn-apply { background: #2b2f3a; border: 1px solid #3b4050; color: #fff; padding: 8px; font-size: 11px; margin-top: 6px; cursor: pointer; border-radius: 4px; width: 100%; }
     canvas { width: 100%; height: 160px; background: #121318; border-radius: 8px; margin-top: 8px; border: 1px solid #2b2f3a; }
   </style>
 </head>
@@ -46,9 +44,9 @@
 
 <div class="card">
   <div class="header">
-    <div class="pair-search-container">
-      <input type="text" id="pairSearch" class="search-input" placeholder="Filtrar..." oninput="filterPairs()">
-      <select id="pairSelect" class="title-select" onchange="changePair()">
+    <div class="pair-container">
+      <label>SELECIONAR ATIVO / FUTUROS PIONEX</label>
+      <select id="pairSelect" class="title-select">
         <optgroup label="Pionex Stocks Futuros (xStocks)">
           <option value="AAPLXUSDT">AAPLX / USDT (Apple)</option>
           <option value="TSLAXUSDT">TSLAX / USDT (Tesla)</option>
@@ -57,9 +55,6 @@
           <option value="GOOGLXUSDT">GOOGLX / USDT (Google)</option>
           <option value="SPYXUSDT">SPYX / USDT (S&P 500)</option>
           <option value="QQQXUSDT">QQQX / USDT (Nasdaq 100)</option>
-          <option value="CRCLXUSDT">CRCLX / USDT (Circle)</option>
-          <option value="USOXUSDT">USOX / USDT (Petróleo USO)</option>
-          <option value="SLVXUSDT">SLVX / USDT (Prata SLV)</option>
         </optgroup>
         <optgroup label="Criptomoedas Principais">
           <option value="SOLUSDT" selected>SOL / USDT Perp</option>
@@ -71,7 +66,7 @@
       </select>
     </div>
     <div class="price-display">
-      <span style="font-size: 11px; color: #848e9c;">Preço Atual | Volatilidade (ATR): <b id="atrValue" style="color:#f3ba2f;">--</b></span>
+      <span style="font-size: 11px; color: #848e9c;">Preço Atual | ATR: <b id="atrValue" style="color:#f3ba2f;">--</b></span>
       <div class="price" id="pionexPrice">Carregando...</div>
     </div>
   </div>
@@ -81,10 +76,10 @@
     <div class="tab" id="tabShort" onclick="setDirection('Encurtar')">Encurtar (Short)</div>
   </div>
 
-  <div class="section-title" style="color: #f3ba2f;">OTIMIZADOR ADAPTATIVO (PIONEX STOCKS & CRIPTO)</div>
+  <div class="section-title" style="color: #f3ba2f;">OTIMIZAÇÃO COM DADOS HISTÓRICOS</div>
   <div class="grid">
     <div class="field">
-      <label>Histórico Otimização (Dias)</label>
+      <label>Histórico (Dias)</label>
       <input type="number" id="optDays" value="30" min="7" max="365" onchange="runOptimization()">
     </div>
     <div class="field">
@@ -140,13 +135,13 @@
     <input type="number" id="baseInvestment" value="20" oninput="onManualParamChange()">
   </div>
 
-  <button class="btn-test-manual" onclick="runManualSimulationButton()">▶ Executar Teste Manual com Meus Ajustes</button>
+  <button class="btn-test-manual" onclick="onManualParamChange()">▶ Executar Teste Manual com Meus Ajustes</button>
 
   <div class="stats">
     <div class="row"><span>Ciclos Concluídos:</span><span class="val highlight" id="activeCycles">0</span></div>
-    <div class="row"><span>Lucro Acumulado:</span><span class="val" id="activeNetProfit">$0.00</span></div>
+    <div class="row"><span>Lucro Acumulado (Compounding):</span><span class="val" id="activeNetProfit">$0.00</span></div>
     <div class="row"><span>Cobertura Total de Queda:</span><span class="val" id="gridDropCoverage">0.00%</span></div>
-    <div class="row"><span>Status:</span><span class="val danger" id="finalLiqPrice">--</span></div>
+    <div class="row"><span>Preço de Liquidação Inicial / Atual:</span><span class="val danger" id="finalLiqPrice">--</span></div>
   </div>
 </div>
 
@@ -154,70 +149,38 @@
   let currentPrice = 0;
   let currentPair = "SOLUSDT";
   let direction = 'Longo';
-  let socket = null;
   let profilePresets = {};
   let cachedCandles = [];
 
-  const stockTickers = ["AAPLXUSDT", "TSLAXUSDT", "NVDAXUSDT", "AMZNXUSDT", "GOOGLXUSDT", "SPYXUSDT", "QQQXUSDT", "CRCLXUSDT", "USOXUSDT", "SLVXUSDT"];
+  const stockTickers = ["AAPLXUSDT", "TSLAXUSDT", "NVDAXUSDT", "AMZNXUSDT", "GOOGLXUSDT", "SPYXUSDT", "QQQXUSDT"];
 
   function initApp() {
-    initWebSocket();
+    const pSelect = document.getElementById('pairSelect');
+    pSelect.addEventListener('change', changePair);
+    fetchPairPrice();
     runOptimization();
   }
 
-  function filterPairs() {
-    let query = document.getElementById('pairSearch').value.toUpperCase();
-    let select = document.getElementById('pairSelect');
-    let options = select.getElementsByTagName('option');
-
-    for (let opt of options) {
-      if (opt.value.includes(query) || opt.innerText.toUpperCase().includes(query)) {
-        opt.style.display = "";
-      } else {
-        opt.style.display = "none";
-      }
-    }
+  function changePair() {
+    currentPair = document.getElementById('pairSelect').value;
+    fetchPairPrice();
+    runOptimization();
   }
 
-  function initWebSocket() {
-    if (socket) socket.close();
-    
-    if (!stockTickers.includes(currentPair)) {
-      try {
-        socket = new WebSocket(`wss://stream.binance.com:9443/ws/${currentPair.toLowerCase()}@trade`);
-        socket.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          currentPrice = parseFloat(data.p);
-          document.getElementById('pionexPrice').innerText = currentPrice.toFixed(3) + " USDT";
-          calculateGridCoverage();
-        };
-      } catch(e) { fetchPriceFallback(); }
-    } else {
-      fetchPriceFallback();
-    }
-  }
-
-  async function fetchPriceFallback() {
+  async function fetchPairPrice() {
     try {
-      let res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${currentPair}`);
-      if (!res.ok) throw new Error();
+      let fetchSymbol = stockTickers.includes(currentPair) ? "BTCUSDT" : currentPair;
+      let res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${fetchSymbol}`);
       let data = await res.json();
-      currentPrice = parseFloat(data.price);
+      currentPrice = parseFloat(data.price) || 100;
       document.getElementById('pionexPrice').innerText = currentPrice.toFixed(3) + " USDT";
       calculateGridCoverage();
     } catch (e) {
       if (cachedCandles.length > 0) {
         currentPrice = parseFloat(cachedCandles[cachedCandles.length - 1][4]);
         document.getElementById('pionexPrice').innerText = currentPrice.toFixed(3) + " USDT";
-        calculateGridCoverage();
       }
     }
-  }
-
-  function changePair() {
-    currentPair = document.getElementById('pairSelect').value;
-    initWebSocket();
-    runOptimization();
   }
 
   function setDirection(dir) {
@@ -227,33 +190,32 @@
     runOptimization();
   }
 
+  function getValidNum(id, fallback) {
+    let val = parseFloat(document.getElementById(id).value);
+    return isNaN(val) ? fallback : val;
+  }
+
   function calculateGridCoverage() {
     if (currentPrice === 0) return;
-    const baseInv = parseFloat(document.getElementById('baseInvestment').value) || 20;
-    const addPct = parseFloat(document.getElementById('addPricePct').value) / 100;
-    const maxSo = parseInt(document.getElementById('maxSafetyOrders').value);
-    const lev = parseFloat(document.getElementById('leverage').value);
-    const volMult = parseFloat(document.getElementById('volMult').value);
-    const stepMult = parseFloat(document.getElementById('stepMult').value);
+    const baseInv = getValidNum('baseInvestment', 20);
+    const addPct = getValidNum('addPricePct', 2.5) / 100;
+    const maxSo = getValidNum('maxSafetyOrders', 15);
+    const lev = getValidNum('leverage', 5);
+    const volMult = getValidNum('volMult', 1.3);
+    const stepMult = getValidNum('stepMult', 1.1);
 
     let price = currentPrice;
     let currentStepPct = addPct;
     let currentVol = baseInv * lev;
-    let totalQty = currentVol / price;
-    let totalNotional = currentVol;
 
     for (let i = 1; i <= maxSo; i++) {
       price = direction === 'Longo' ? price * (1 - currentStepPct) : price * (1 + currentStepPct);
       currentVol *= volMult;
-      let qty = currentVol / price;
-      totalQty += qty;
-      totalNotional += currentVol;
       currentStepPct *= stepMult; 
     }
 
     let realDropCoverage = Math.abs((price - currentPrice) / currentPrice) * 100;
-    document.getElementById('gridDropCoverage').innerText = realDropCoverage.toFixed(1) + "%";
-    document.getElementById('finalLiqPrice').innerText = "CONTA SEGURA";
+    document.getElementById('gridDropCoverage').innerText = (isNaN(realDropCoverage) ? "0.0" : realDropCoverage.toFixed(1)) + "%";
   }
 
   function calculateATR(candles) {
@@ -266,17 +228,20 @@
       trs.push(tr / prevClose);
     }
     let atrVal = (trs.reduce((a, b) => a + b, 0) / trs.length) * 100;
-    document.getElementById('atrValue').innerText = atrVal.toFixed(1) + "%";
-    return atrVal / 100;
+    document.getElementById('atrValue').innerText = (isNaN(atrVal) ? "1.5" : atrVal.toFixed(1)) + "%";
+    return isNaN(atrVal) ? 0.015 : atrVal / 100;
   }
 
-  function simulateStrategy(candles, lev, addPct, tpPct, maxSo, volMult, stepMult = 1.0) {
-    let initialInvestment = parseFloat(document.getElementById('baseInvestment').value) || 20;
-    let walletBalance = initialInvestment; 
+  // SIMULADOR COM RECOMPOSTO DE BANCA E LIQUIDAÇÃO ADAPTATIVA
+  function simulateStrategy(candles, lev, addPct, tpPct, maxSo, volMult, stepMult = 1.1) {
+    let initialInvestment = getValidNum('baseInvestment', 20);
+    let currentBankroll = initialInvestment; // Banca acumulada crescendo a cada ciclo
     let isLiquidated = false;
     let cycles = 0;
     let liqDate = "";
     let cycleEvents = [];
+    let initialLiqPrice = 0;
+    let lastLiqPrice = 0;
 
     let btState = { inPosition: false, avgPrice: 0, totalQty: 0, soFilled: 0, nextAddPrice: 0, tpPrice: 0, lastVol: 0, lastStepPct: 0 };
 
@@ -286,10 +251,11 @@
       let highPrice = parseFloat(c[2]);
       let closePrice = parseFloat(c[4]);
 
+      // INICIA NOVO CICLO IMEDIATAMENTE APÓS FECHAR O ANTERIOR
       if (!btState.inPosition) {
         btState.inPosition = true;
         btState.avgPrice = closePrice;
-        btState.lastVol = initialInvestment * lev;
+        btState.lastVol = currentBankroll * lev;
         btState.totalQty = btState.lastVol / closePrice;
         btState.soFilled = 0; 
         btState.lastStepPct = addPct;
@@ -299,29 +265,36 @@
         continue;
       }
 
+      // Preço de Liquidação Dinâmico (Ajustado pela Margem de Banca Expandida)
       let notionalTotal = btState.totalQty * btState.avgPrice;
       let liq = direction === 'Longo' 
-        ? btState.avgPrice - ((walletBalance - (notionalTotal * 0.005)) / (notionalTotal / btState.avgPrice))
-        : btState.avgPrice + ((walletBalance - (notionalTotal * 0.005)) / (notionalTotal / btState.avgPrice));
+        ? btState.avgPrice - ((currentBankroll - (notionalTotal * 0.005)) / (notionalTotal / btState.avgPrice))
+        : btState.avgPrice + ((currentBankroll - (notionalTotal * 0.005)) / (notionalTotal / btState.avgPrice));
 
+      if (initialLiqPrice === 0) initialLiqPrice = liq;
+      lastLiqPrice = liq;
+
+      // CHECA LIQUIDAÇÃO
       if ((direction === 'Longo' && lowPrice <= liq) || (direction === 'Encurtar' && highPrice >= liq)) {
         isLiquidated = true;
         liqDate = new Date(c[0]).toLocaleDateString('pt-BR');
-        walletBalance = 0;
+        currentBankroll = 0;
         cycleEvents.push({ type: 'liq', index: idx, price: liq });
         break;
       }
 
+      // CHECA TAKE PROFIT E REINICIA O CICLO COM LUCRO ACRESCENTADO Á BANCA
       let hitTP = direction === 'Longo' ? highPrice >= btState.tpPrice : lowPrice <= btState.tpPrice;
       if (hitTP) {
         let profit = Math.abs(btState.tpPrice - btState.avgPrice) * btState.totalQty;
-        walletBalance += profit;
+        currentBankroll += profit; // COMPOUNDING: O LUCRO EXPANDE A BANCA DO PRÓXIMO CICLO
         cycles++;
         cycleEvents.push({ type: 'tp', index: idx, price: btState.tpPrice });
-        btState.inPosition = false; 
+        btState.inPosition = false; // Novo ciclo inicia no próximo candle
         continue;
       }
 
+      // ORDENS DE SEGURANÇA (DCA)
       let hitSO = direction === 'Longo' ? lowPrice <= btState.nextAddPrice : highPrice >= btState.nextAddPrice;
       if (hitSO && btState.soFilled < maxSo) {
         btState.soFilled++;
@@ -338,32 +311,32 @@
 
     return {
       lev, addPct: addPct * 100, tpPct: tpPct * 100, maxSo, volMult, stepMult,
-      netProfit: walletBalance - initialInvestment, cycles, isLiquidated, liqDate, cycleEvents
+      netProfit: currentBankroll - initialInvestment, cycles, isLiquidated, liqDate, cycleEvents,
+      initialLiqPrice, lastLiqPrice
     };
   }
 
   async function runOptimization() {
-    const days = parseInt(document.getElementById('optDays').value);
+    const days = getValidNum('optDays', 30);
     const container = document.getElementById('profilesContainer');
-    container.style.display = 'flex';
-    container.innerHTML = '<div style="font-size: 11px; color: #848e9c; text-align: center;">Carregando histórico do mercado...</div>';
+    container.innerHTML = '<div style="font-size: 11px; color: #848e9c; text-align: center;">Carregando dados e calculando compounding...</div>';
 
     try {
       let interval = days <= 30 ? "1h" : "2h";
       let limit = Math.min(1000, Math.ceil(days * (interval === "2h" ? 12 : 24)));
-      
       let fetchSymbol = stockTickers.includes(currentPair) ? "BTCUSDT" : currentPair;
+
       let res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${fetchSymbol}&interval=${interval}&limit=${limit}`);
       cachedCandles = await res.json();
 
-      if (currentPrice === 0) {
+      if (currentPrice === 0 && cachedCandles.length > 0) {
         currentPrice = parseFloat(cachedCandles[cachedCandles.length - 1][4]);
         document.getElementById('pionexPrice').innerText = currentPrice.toFixed(3) + " USDT";
       }
 
       let atr = calculateATR(cachedCandles);
       let baseAdd = Math.max(0.015, atr * 1.2);
-      
+
       const profiles = {
         conservador: { lev: [2, 3], addPct: [baseAdd * 2.0], tp: [baseAdd * 0.8], maxSo: [12], volMult: [1.2] },
         moderado:    { lev: [4, 5], addPct: [baseAdd * 1.4], tp: [baseAdd * 1.1], maxSo: [10], volMult: [1.3] },
@@ -393,14 +366,13 @@
         profilePresets[pKey] = bestCandidate || simulateStrategy(cachedCandles, 3, baseAdd*2, baseAdd, 10, 1.2, 1.1);
       }
 
-      let survivorCandidate = simulateStrategy(cachedCandles, 2, 0.035, 0.012, 15, 1.2, 1.1);
-      profilePresets['sobrevivente'] = survivorCandidate;
+      profilePresets['sobrevivente'] = simulateStrategy(cachedCandles, 2, 0.035, 0.012, 15, 1.2, 1.1);
 
       renderProfiles();
       onManualParamChange();
 
     } catch (e) {
-      container.innerHTML = '<div style="color:#f6465d; text-align:center;">Erro na API. Recarregue a página.</div>';
+      container.innerHTML = '<div style="color:#f6465d; text-align:center;">Erro ao sincronizar. Recarregue a página.</div>';
     }
   }
 
@@ -420,7 +392,7 @@
       let pCard = document.createElement('div');
       pCard.className = `profile-card ${key}`;
 
-      let initial = parseFloat(document.getElementById('baseInvestment').value) || 20;
+      let initial = getValidNum('baseInvestment', 20);
       let returnPct = ((p.netProfit / initial) * 100).toFixed(1);
 
       pCard.innerHTML = `
@@ -429,7 +401,7 @@
           <span style="color:${p.isLiquidated ? '#f6465d':'#0ecb81'}">${p.isLiquidated ? 'FALHOU':'✔ SOBREVIVEU'}</span>
         </div>
         <div>
-          <b>+${returnPct}%</b> | Ciclos: <b>${p.cycles}</b><br>
+          <b>+${isNaN(returnPct) ? "0.0" : returnPct}%</b> | Ciclos: <b>${p.cycles}</b><br>
           <span style="color:#848e9c; font-size:10px;">Ajustes: ${p.lev}x | Queda: ${p.addPct.toFixed(1)}% | TP: ${p.tpPct.toFixed(1)}% | SOs: ${p.maxSo}</span>
         </div>
         <button class="btn-apply" onclick="applyPreset('${key}')">Carregar no Testador</button>
@@ -454,32 +426,28 @@
     calculateGridCoverage();
     if (cachedCandles.length === 0) return;
 
-    const lev = parseFloat(document.getElementById('leverage').value);
-    const addPct = parseFloat(document.getElementById('addPricePct').value) / 100;
-    const tpPct = parseFloat(document.getElementById('tpPct').value) / 100;
-    const maxSo = parseInt(document.getElementById('maxSafetyOrders').value);
-    const volMult = parseFloat(document.getElementById('volMult').value);
-    const stepMult = parseFloat(document.getElementById('stepMult').value);
+    const lev = getValidNum('leverage', 5);
+    const addPct = getValidNum('addPricePct', 2.5) / 100;
+    const tpPct = getValidNum('tpPct', 1.8) / 100;
+    const maxSo = getValidNum('maxSafetyOrders', 15);
+    const volMult = getValidNum('volMult', 1.3);
+    const stepMult = getValidNum('stepMult', 1.1);
 
     let res = simulateStrategy(cachedCandles, lev, addPct, tpPct, maxSo, volMult, stepMult);
 
     document.getElementById('activeCycles').innerText = res.cycles;
     
-    let initial = parseFloat(document.getElementById('baseInvestment').value) || 20;
+    let initial = getValidNum('baseInvestment', 20);
     if (res.isLiquidated) {
       document.getElementById('activeNetProfit').innerHTML = `<span class="danger">LIQUIDADO em ${res.liqDate}</span>`;
-      document.getElementById('finalLiqPrice').innerText = "ATINGIDO (" + res.liqDate + ")";
+      document.getElementById('finalLiqPrice').innerText = "LIQUIDADO (" + res.liqDate + ")";
     } else {
       let returnPct = ((res.netProfit / initial) * 100).toFixed(1);
-      document.getElementById('activeNetProfit').innerHTML = `<span style="color:#0ecb81; font-weight:bold;">+$${res.netProfit.toFixed(2)} (+${returnPct}%)</span>`;
-      document.getElementById('finalLiqPrice').innerText = "CONTA SEGURA";
+      document.getElementById('activeNetProfit').innerHTML = `<span style="color:#0ecb81; font-weight:bold;">+$${res.netProfit.toFixed(2)} (+${isNaN(returnPct) ? "0.0":returnPct}%)</span>`;
+      document.getElementById('finalLiqPrice').innerText = `${res.initialLiqPrice.toFixed(2)} -> ${res.lastLiqPrice.toFixed(2)} USDT (Proteção Aumentada)`;
     }
 
     renderChart(cachedCandles, res.cycleEvents);
-  }
-
-  function runManualSimulationButton() {
-    onManualParamChange();
   }
 
   function renderChart(candles, events) {
@@ -529,7 +497,7 @@
     });
   }
 
-  initApp();
+  window.onload = initApp;
 </script>
 </body>
 </html>
