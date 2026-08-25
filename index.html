@@ -7,11 +7,11 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background-color: #121318; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 12px; display: flex; justify-content: center; }
-    .card { background: #1c1e24; border-radius: 16px; padding: 16px; width: 100%; max-width: 520px; }
+    .card { background: #1c1e24; border-radius: 16px; padding: 16px; width: 100%; max-width: 520px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
     .header { margin-bottom: 12px; }
     .pair-search-container { display: flex; gap: 6px; margin-bottom: 6px; }
-    .search-input { background: #2b2f3a; border: 1px solid #3b4050; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 13px; width: 45%; }
-    .title-select { background: #2b2f3a; color: #fff; border: 1px solid #3b4050; font-size: 13px; font-weight: bold; padding: 8px; border-radius: 6px; width: 55%; }
+    .search-input { background: #2b2f3a; border: 1px solid #3b4050; color: #fff; padding: 8px 10px; border-radius: 6px; font-size: 13px; width: 40%; }
+    .title-select { background: #2b2f3a; color: #fff; border: 1px solid #3b4050; font-size: 13px; font-weight: bold; padding: 8px; border-radius: 6px; width: 60%; }
     .price-display { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; background: #181a20; padding: 8px 12px; border-radius: 8px; }
     .price { font-size: 16px; font-weight: bold; color: #0ecb81; }
     .tabs { display: flex; background: #2b2f3a; border-radius: 8px; padding: 2px; margin-bottom: 12px; }
@@ -21,7 +21,7 @@
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .field { margin-bottom: 8px; }
     label { font-size: 10px; color: #848e9c; display: block; margin-bottom: 2px; }
-    input, select { width: 100%; padding: 8px; background: #2b2f3a; border: none; color: #fff; border-radius: 6px; font-size: 13px; }
+    input, select { width: 100%; padding: 8px; background: #2b2f3a; border: 1px solid #3b4050; color: #fff; border-radius: 6px; font-size: 13px; }
     button { width: 100%; padding: 10px; background: #0ecb81; border: none; color: white; font-weight: bold; font-size: 12px; border-radius: 8px; cursor: pointer; margin-top: 4px; }
     .btn-opt { background: #f3ba2f; color: #121318; font-weight: bold; }
     .btn-test-manual { background: #2b2f3a; border: 1px solid #0ecb81; color: #0ecb81; font-weight: bold; margin-top: 6px; }
@@ -31,7 +31,6 @@
     .val { font-weight: bold; color: #fff; }
     .danger { color: #f6465d !important; }
     .highlight { color: #f3ba2f !important; }
-    
     .profiles-container { display: flex; margin-top: 10px; flex-direction: column; gap: 8px; }
     .profile-card { background: #181a20; border: 1px solid #3b4050; border-radius: 8px; padding: 10px; font-size: 11px; }
     .profile-card.conservador { border-left: 4px solid #0ecb81; }
@@ -39,8 +38,7 @@
     .profile-card.agressivo { border-left: 4px solid #f6465d; }
     .profile-card.sobrevivente { border-left: 4px solid #3b82f6; }
     .profile-title { font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 4px; }
-    .btn-apply { background: #2b2f3a; border: 1px solid #3b4050; color: #fff; padding: 4px 8px; font-size: 10px; margin-top: 6px; cursor: pointer; border-radius: 4px; }
-    
+    .btn-apply { background: #2b2f3a; border: 1px solid #3b4050; color: #fff; padding: 6px 8px; font-size: 11px; margin-top: 6px; cursor: pointer; border-radius: 4px; width: 100%; }
     canvas { width: 100%; height: 160px; background: #121318; border-radius: 8px; margin-top: 8px; border: 1px solid #2b2f3a; }
   </style>
 </head>
@@ -49,9 +47,8 @@
 <div class="card">
   <div class="header">
     <div class="pair-search-container">
-      <input type="text" id="pairSearch" class="search-input" placeholder="Buscar par..." oninput="filterPairs()">
+      <input type="text" id="pairSearch" class="search-input" placeholder="Filtrar..." oninput="filterPairs()">
       <select id="pairSelect" class="title-select" onchange="changePair()">
-        <!-- Pionex Stocks & Crypto Assets -->
         <optgroup label="Pionex Stocks Futuros (xStocks)">
           <option value="AAPLXUSDT">AAPLX / USDT (Apple)</option>
           <option value="TSLAXUSDT">TSLAX / USDT (Tesla)</option>
@@ -74,8 +71,8 @@
       </select>
     </div>
     <div class="price-display">
-      <span style="font-size: 11px; color: #848e9c;">Preço Atual | Volatilidade ATR (24h): <b id="atrValue" style="color:#f3ba2f;">--</b></span>
-      <div class="price" id="pionexPrice">Conectando...</div>
+      <span style="font-size: 11px; color: #848e9c;">Preço Atual | Volatilidade (ATR): <b id="atrValue" style="color:#f3ba2f;">--</b></span>
+      <div class="price" id="pionexPrice">Carregando...</div>
     </div>
   </div>
 
@@ -92,12 +89,12 @@
     </div>
     <div class="field">
       <label>&nbsp;</label>
-      <button onclick="runOptimization()" class="btn-opt">Gerar 4 Perfis de Mercado</button>
+      <button onclick="runOptimization()" class="btn-opt">Gerar 4 Perfis</button>
     </div>
   </div>
 
   <div id="profilesContainer" class="profiles-container">
-    <div id="statusOptText" style="font-size: 11px; color: #848e9c; text-align: center;">Carregando dados...</div>
+    <div id="statusOptText" style="font-size: 11px; color: #848e9c; text-align: center;">Iniciando motor de simulação...</div>
   </div>
 
   <div class="section-title">GRÁFICO DE OSCILAÇÃO E FECHAMENTOS DE CICLO</div>
@@ -155,7 +152,6 @@
 
 <script>
   let currentPrice = 0;
-  let allPairs = [];
   let currentPair = "SOLUSDT";
   let direction = 'Longo';
   let socket = null;
@@ -186,22 +182,22 @@
   function initWebSocket() {
     if (socket) socket.close();
     
-    // Se for um par de Cripto padrão, abre Stream em tempo real da Binance/Pionex
     if (!stockTickers.includes(currentPair)) {
-      socket = new WebSocket(`wss://stream.binance.com:9443/ws/${currentPair.toLowerCase()}@trade`);
-      socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        currentPrice = parseFloat(data.p);
-        document.getElementById('pionexPrice').innerText = currentPrice.toFixed(3) + " USDT";
-        calculateGridCoverage();
-      };
+      try {
+        socket = new WebSocket(`wss://stream.binance.com:9443/ws/${currentPair.toLowerCase()}@trade`);
+        socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          currentPrice = parseFloat(data.p);
+          document.getElementById('pionexPrice').innerText = currentPrice.toFixed(3) + " USDT";
+          calculateGridCoverage();
+        };
+      } catch(e) { fetchPriceFallback(); }
     } else {
-      // Para pares de Ações Futuras (Stocks Tokenized)
-      fetchPriceFromApi();
+      fetchPriceFallback();
     }
   }
 
-  async function fetchPriceFromApi() {
+  async function fetchPriceFallback() {
     try {
       let res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${currentPair}`);
       if (!res.ok) throw new Error();
@@ -210,7 +206,6 @@
       document.getElementById('pionexPrice').innerText = currentPrice.toFixed(3) + " USDT";
       calculateGridCoverage();
     } catch (e) {
-      // Se não houver par direto na API pública, usa o último preço dos candles históricos
       if (cachedCandles.length > 0) {
         currentPrice = parseFloat(cachedCandles[cachedCandles.length - 1][4]);
         document.getElementById('pionexPrice').innerText = currentPrice.toFixed(3) + " USDT";
@@ -232,7 +227,6 @@
     runOptimization();
   }
 
-  // CÁLCULO PRECISO DA COBERTURA DE GRID (Exatamente igual à foto Pionex)
   function calculateGridCoverage() {
     if (currentPrice === 0) return;
     const baseInv = parseFloat(document.getElementById('baseInvestment').value) || 20;
@@ -257,16 +251,9 @@
       currentStepPct *= stepMult; 
     }
 
-    let projAvgPrice = totalNotional / totalQty;
     let realDropCoverage = Math.abs((price - currentPrice) / currentPrice) * 100;
-    let maintenanceMargin = 0.005;
-
-    let finalLiq = direction === 'Longo' 
-      ? projAvgPrice * (1 - (1 / lev) + maintenanceMargin)
-      : projAvgPrice * (1 + (1 / lev) - maintenanceMargin);
-
     document.getElementById('gridDropCoverage').innerText = realDropCoverage.toFixed(1) + "%";
-    document.getElementById('finalLiqPrice').innerText = finalLiq > 0 ? "CONTA SEGURA" : "CONTA SEGURA";
+    document.getElementById('finalLiqPrice').innerText = "CONTA SEGURA";
   }
 
   function calculateATR(candles) {
@@ -283,7 +270,6 @@
     return atrVal / 100;
   }
 
-  // MOTOR DE SIMULAÇÃO REALISTA (365 Dias / Recomposição de Margem)
   function simulateStrategy(candles, lev, addPct, tpPct, maxSo, volMult, stepMult = 1.0) {
     let initialInvestment = parseFloat(document.getElementById('baseInvestment').value) || 20;
     let walletBalance = initialInvestment; 
@@ -344,9 +330,7 @@
         let totalCost = (btState.avgPrice * btState.totalQty) + (closePrice * newQty);
         btState.totalQty += newQty;
         btState.avgPrice = totalCost / btState.totalQty;
-        
         btState.lastStepPct *= stepMult; 
-        
         btState.nextAddPrice = direction === 'Longo' ? closePrice * (1 - btState.lastStepPct) : closePrice * (1 + btState.lastStepPct);
         btState.tpPrice = direction === 'Longo' ? btState.avgPrice * (1 + (tpPct / lev)) : btState.avgPrice * (1 - (tpPct / lev));
       }
@@ -362,7 +346,7 @@
     const days = parseInt(document.getElementById('optDays').value);
     const container = document.getElementById('profilesContainer');
     container.style.display = 'flex';
-    container.innerHTML = '<div style="font-size: 11px; color: #848e9c; text-align: center;">Buscando histórico e calculando oscilações...</div>';
+    container.innerHTML = '<div style="font-size: 11px; color: #848e9c; text-align: center;">Carregando histórico do mercado...</div>';
 
     try {
       let interval = days <= 30 ? "1h" : "2h";
@@ -409,7 +393,6 @@
         profilePresets[pKey] = bestCandidate || simulateStrategy(cachedCandles, 3, baseAdd*2, baseAdd, 10, 1.2, 1.1);
       }
 
-      // PERFIL 4: SOBREVIVENTE 100% BLINDADO
       let survivorCandidate = simulateStrategy(cachedCandles, 2, 0.035, 0.012, 15, 1.2, 1.1);
       profilePresets['sobrevivente'] = survivorCandidate;
 
@@ -417,7 +400,7 @@
       onManualParamChange();
 
     } catch (e) {
-      container.innerHTML = '<div style="color:#f6465d; text-align:center;">Erro ao sincronizar par. Tente outro ativo.</div>';
+      container.innerHTML = '<div style="color:#f6465d; text-align:center;">Erro na API. Recarregue a página.</div>';
     }
   }
 
@@ -426,9 +409,9 @@
     container.innerHTML = "";
 
     const profileNames = {
-      conservador: "1. Conservador",
-      moderado: "2. Moderado",
-      agressivo: "3. Agressivo",
+      conservador: "1. Conservador (Baixo Risco)",
+      moderado: "2. Moderado (Equilibrado)",
+      agressivo: "3. Agressivo (Maior Lucro)",
       sobrevivente: "4. Sobrevivente (100% Blindado)"
     };
 
@@ -437,15 +420,8 @@
       let pCard = document.createElement('div');
       pCard.className = `profile-card ${key}`;
 
-      let statusHTML = "";
       let initial = parseFloat(document.getElementById('baseInvestment').value) || 20;
       let returnPct = ((p.netProfit / initial) * 100).toFixed(1);
-
-      if (p.isLiquidated) {
-        statusHTML = `<span class="danger">❌ LIQUIDADO (${p.liqDate})</span> | Ciclos: ${p.cycles}`;
-      } else {
-        statusHTML = `<span style="color:#0ecb81; font-weight:bold;">✔ SOBREVIVEU</span> | <b>+${returnPct}%</b> | Ciclos: <b>${p.cycles}</b>`;
-      }
 
       pCard.innerHTML = `
         <div class="profile-title">
@@ -453,10 +429,10 @@
           <span style="color:${p.isLiquidated ? '#f6465d':'#0ecb81'}">${p.isLiquidated ? 'FALHOU':'✔ SOBREVIVEU'}</span>
         </div>
         <div>
-          +${returnPct}% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Ciclos: ${p.cycles}<br>
+          <b>+${returnPct}%</b> | Ciclos: <b>${p.cycles}</b><br>
           <span style="color:#848e9c; font-size:10px;">Ajustes: ${p.lev}x | Queda: ${p.addPct.toFixed(1)}% | TP: ${p.tpPct.toFixed(1)}% | SOs: ${p.maxSo}</span>
         </div>
-        <button class="btn-apply" onclick="applyPreset('${key}')">Carregar Parâmetros</button>
+        <button class="btn-apply" onclick="applyPreset('${key}')">Carregar no Testador</button>
       `;
       container.appendChild(pCard);
     }
@@ -491,7 +467,7 @@
     
     let initial = parseFloat(document.getElementById('baseInvestment').value) || 20;
     if (res.isLiquidated) {
-      document.getElementById('activeNetProfit').innerHTML = `<span class="danger">LIQUIDADO (-$${initial.toFixed(2)}) em ${res.liqDate}</span>`;
+      document.getElementById('activeNetProfit').innerHTML = `<span class="danger">LIQUIDADO em ${res.liqDate}</span>`;
       document.getElementById('finalLiqPrice').innerText = "ATINGIDO (" + res.liqDate + ")";
     } else {
       let returnPct = ((res.netProfit / initial) * 100).toFixed(1);
@@ -513,7 +489,6 @@
     canvas.height = canvas.offsetHeight;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     if (!candles || candles.length === 0) return;
 
     let closes = candles.map(c => parseFloat(c[4]));
