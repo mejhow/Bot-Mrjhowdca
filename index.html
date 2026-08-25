@@ -51,17 +51,27 @@
           <option value="AAPLXUSDT">AAPLX / USDT (Apple)</option>
           <option value="TSLAXUSDT">TSLAX / USDT (Tesla)</option>
           <option value="NVDAXUSDT">NVDAX / USDT (Nvidia)</option>
-          <option value="AMZNXUSDT">AMZNX / USDT (Amazon)</option>
+          <option value="AMZNXUSDT" selected>AMZNX / USDT (Amazon)</option>
           <option value="GOOGLXUSDT">GOOGLX / USDT (Google)</option>
-          <option value="SPYXUSDT">SPYX / USDT (S&P 500)</option>
+          <option value="SPYXUSDT">SPYX / USDT (S&P 500 Index)</option>
           <option value="QQQXUSDT">QQQX / USDT (Nasdaq 100)</option>
+          <option value="SPCXUSDT">SPCX / USDT (SpaceX)</option>
+          <option value="CRCLXUSDT">CRCLX / USDT (Circle)</option>
+          <option value="SLVXUSDT">SLVX / USDT (Silver / Prata)</option>
+          <option value="USOXUSDT">USOX / USDT (US Oil / Petróleo)</option>
         </optgroup>
-        <optgroup label="Criptomoedas Principais">
-          <option value="SOLUSDT" selected>SOL / USDT Perp</option>
+        <optgroup label="Criptomoedas Principais & Altcoins">
+          <option value="SOLUSDT">SOL / USDT Perp</option>
           <option value="BTCUSDT">BTC / USDT Perp</option>
           <option value="ETHUSDT">ETH / USDT Perp</option>
           <option value="BNBUSDT">BNB / USDT Perp</option>
           <option value="XRPUSDT">XRP / USDT Perp</option>
+          <option value="DOGEUSDT">DOGE / USDT Perp</option>
+          <option value="ADAUSDT">ADA / USDT Perp</option>
+          <option value="AVAXUSDT">AVAX / USDT Perp</option>
+          <option value="LINKUSDT">LINK / USDT Perp</option>
+          <option value="PEPEUSDT">PEPE / USDT Perp</option>
+          <option value="SUIUSDT">SUI / USDT Perp</option>
         </optgroup>
       </select>
     </div>
@@ -147,12 +157,12 @@
 
 <script>
   let currentPrice = 0;
-  let currentPair = "SOLUSDT";
+  let currentPair = "AMZNXUSDT";
   let direction = 'Longo';
   let profilePresets = {};
   let cachedCandles = [];
 
-  const stockTickers = ["AAPLXUSDT", "TSLAXUSDT", "NVDAXUSDT", "AMZNXUSDT", "GOOGLXUSDT", "SPYXUSDT", "QQQXUSDT"];
+  const stockTickers = ["AAPLXUSDT", "TSLAXUSDT", "NVDAXUSDT", "AMZNXUSDT", "GOOGLXUSDT", "SPYXUSDT", "QQQXUSDT", "SPCXUSDT", "CRCLXUSDT", "SLVXUSDT", "USOXUSDT"];
 
   function initApp() {
     const pSelect = document.getElementById('pairSelect');
@@ -232,10 +242,9 @@
     return isNaN(atrVal) ? 0.015 : atrVal / 100;
   }
 
-  // SIMULADOR COM RECOMPOSTO DE BANCA E LIQUIDAÇÃO ADAPTATIVA
   function simulateStrategy(candles, lev, addPct, tpPct, maxSo, volMult, stepMult = 1.1) {
     let initialInvestment = getValidNum('baseInvestment', 20);
-    let currentBankroll = initialInvestment; // Banca acumulada crescendo a cada ciclo
+    let currentBankroll = initialInvestment;
     let isLiquidated = false;
     let cycles = 0;
     let liqDate = "";
@@ -251,7 +260,6 @@
       let highPrice = parseFloat(c[2]);
       let closePrice = parseFloat(c[4]);
 
-      // INICIA NOVO CICLO IMEDIATAMENTE APÓS FECHAR O ANTERIOR
       if (!btState.inPosition) {
         btState.inPosition = true;
         btState.avgPrice = closePrice;
@@ -265,7 +273,6 @@
         continue;
       }
 
-      // Preço de Liquidação Dinâmico (Ajustado pela Margem de Banca Expandida)
       let notionalTotal = btState.totalQty * btState.avgPrice;
       let liq = direction === 'Longo' 
         ? btState.avgPrice - ((currentBankroll - (notionalTotal * 0.005)) / (notionalTotal / btState.avgPrice))
@@ -274,7 +281,6 @@
       if (initialLiqPrice === 0) initialLiqPrice = liq;
       lastLiqPrice = liq;
 
-      // CHECA LIQUIDAÇÃO
       if ((direction === 'Longo' && lowPrice <= liq) || (direction === 'Encurtar' && highPrice >= liq)) {
         isLiquidated = true;
         liqDate = new Date(c[0]).toLocaleDateString('pt-BR');
@@ -283,18 +289,16 @@
         break;
       }
 
-      // CHECA TAKE PROFIT E REINICIA O CICLO COM LUCRO ACRESCENTADO Á BANCA
       let hitTP = direction === 'Longo' ? highPrice >= btState.tpPrice : lowPrice <= btState.tpPrice;
       if (hitTP) {
         let profit = Math.abs(btState.tpPrice - btState.avgPrice) * btState.totalQty;
-        currentBankroll += profit; // COMPOUNDING: O LUCRO EXPANDE A BANCA DO PRÓXIMO CICLO
+        currentBankroll += profit;
         cycles++;
         cycleEvents.push({ type: 'tp', index: idx, price: btState.tpPrice });
-        btState.inPosition = false; // Novo ciclo inicia no próximo candle
+        btState.inPosition = false;
         continue;
       }
 
-      // ORDENS DE SEGURANÇA (DCA)
       let hitSO = direction === 'Longo' ? lowPrice <= btState.nextAddPrice : highPrice >= btState.nextAddPrice;
       if (hitSO && btState.soFilled < maxSo) {
         btState.soFilled++;
@@ -369,10 +373,12 @@
       profilePresets['sobrevivente'] = simulateStrategy(cachedCandles, 2, 0.035, 0.012, 15, 1.2, 1.1);
 
       renderProfiles();
-      onManualParamChange();
+      
+      // DICA DE OURO: Atualiza dinamicamente os parâmetros nos inputs manuais ao otimizar o novo par!
+      applyPreset('conservador');
 
     } catch (e) {
-      container.innerHTML = '<div style="color:#f6465d; text-align:center;">Erro ao sincronizar. Recarregue a página.</div>';
+      container.innerHTML = '<div style="color:#f6465d; text-align:center;">Erro ao sincronizar dados do par. Recarregue a página.</div>';
     }
   }
 
