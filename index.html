@@ -3,213 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor de Pares - Pionex API</title>
+    <title>Testador DCA Futuros & Stocks - Pionex</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            color: #f59e0b;
-            text-align: center;
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #334155;
-            background-color: #1e293b;
-            color: #fff;
-            font-size: 16px;
-        }
-
-        button {
-            padding: 12px 20px;
-            border-radius: 6px;
-            border: none;
-            background-color: #f59e0b;
-            color: #0f172a;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        button:hover {
-            background-color: #d97706;
-        }
-
-        .stats {
-            margin-bottom: 15px;
-            font-size: 14px;
-            color: #94a3b8;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #1e293b;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #334155;
-            color: #f59e0b;
-            font-size: 14px;
-            text-transform: uppercase;
-        }
-
-        tr {
-            border-bottom: 1px solid #334155;
-        }
-
-        tr:hover {
-            background-color: #182232;
-        }
-
-        .price {
-            font-family: monospace;
-            font-weight: bold;
-            color: #38bdf8;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            font-size: 18px;
-            color: #f59e0b;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1, h2 { color: #f59e0b; text-align: center; }
+        .card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #334155; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #f59e0b; color: #0f172a; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; }
+        button:hover { background: #d97706; }
+        .status-liquidado { color: #ef4444; font-weight: bold; }
+        .status-ok { color: #22c55e; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Pionex Market Monitor</h1>
-    
-    <div class="controls">
-        <input type="text" id="searchInput" placeholder="Filtrar por par (ex: BTC, ETH, USDT)..." onkeyup="filtrarPares()">
-        <button onclick="carregarDados()">Atualizar Dados</button>
+    <h1>Testador DCA Futuros & Stocks (Pionex)</h1>
+
+    <div class="card">
+        <label>Selecione o Par (Futuros / Stocks):</label>
+        <select id="selectPar" onchange="carregarParSelecionado()">
+            <option value="">Carregando pares da Pionex...</option>
+        </select>
     </div>
 
-    <div class="stats" id="statsText">Carregando dados da Pionex...</div>
+    <div class="card">
+        <h2>Configuração DCA & Risco</h2>
+        <div class="grid">
+            <div>
+                <label>Queda Adição (%)</label>
+                <input type="number" id="quedaAdicao" value="3.2" step="0.1">
+            </div>
+            <div>
+                <label>Take Profit (%)</label>
+                <input type="number" id="takeProfit" value="3.0" step="0.1">
+            </div>
+            <div>
+                <label>Ordens de Segurança (Max)</label>
+                <input type="number" id="maxOrdens" value="12">
+            </div>
+            <div>
+                <label>Alavancagem (1x - 100x)</label>
+                <input type="number" id="alavancagem" value="1" min="1" max="100">
+            </div>
+            <div>
+                <label>Mult. Volume (Martingale)</label>
+                <input type="number" id="multVol" value="1.1" step="0.1">
+            </div>
+            <div>
+                <label>Mult. Passo de Queda</label>
+                <input type="number" id="multPasso" value="1.0" step="0.1">
+            </div>
+            <div>
+                <label>Investimento Base Inicial (USDT)</label>
+                <input type="number" id="investimentoInicial" value="100">
+            </div>
+        </div>
+        <button onclick="executarSimulacao()">▶ Executar Teste Manual em Futuros</button>
+    </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Símbolo</th>
-                <th>Moeda Base</th>
-                <th>Cotação</th>
-                <th>Preço Atual</th>
-                <th>Mínimo por Ordem</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody">
-            <tr>
-                <td colspan="5" class="loading">Buscando pares na API da Pionex...</td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="card" id="painelResultado">
+        <h2>Resultado da Simulação</h2>
+        <p>Cobertura Teórica de Queda: <span id="resCobertura">0%</span></p>
+        <p>Status da Carteira: <span id="resStatus">Aguardando Teste</span></p>
+    </div>
 </div>
 
 <script>
     const API_BASE = "https://api.pionex.com";
-    let listaPares = [];
-    let mapaPrecos = {};
 
-    async function carregarDados() {
-        const tbody = document.getElementById("tableBody");
-        const stats = document.getElementById("statsText");
-        tbody.innerHTML = `<tr><td colspan="5" class="loading">Carregando da API Pionex...</td></tr>`;
-
+    async function carregarParesFuturos() {
+        const select = document.getElementById("selectPar");
         try {
-            // 1. Busca todos os pares/símbolos SPOT da Pionex
-            const resSymbols = await fetch(`${API_BASE}/api/v1/common/symbols?type=SPOT`);
-            const dataSymbols = await resSymbols.json();
+            // Busca símbolos PERP (Futuros e Stocks Perpétuas)
+            const res = await fetch(`${API_BASE}/api/v1/common/symbols?type=PERP`);
+            const data = await res.json();
 
-            // 2. Busca todas as cotações/tickers recentes
-            const resTickers = await fetch(`${API_BASE}/api/v1/market/tickers`);
-            const dataTickers = await resTickers.json();
-
-            if (dataSymbols.result && dataTickers.result) {
-                listaPares = dataSymbols.data.symbols;
-
-                // Mapeia preços para busca rápida por símbolo
-                mapaPrecos = {};
-                dataTickers.data.tickers.forEach(t => {
-                    mapaPrecos[t.symbol] = t.close;
+            if (data.result) {
+                select.innerHTML = "";
+                data.data.symbols.forEach(s => {
+                    const option = document.createElement("option");
+                    option.value = s.symbol;
+                    option.text = s.symbol;
+                    select.appendChild(option);
                 });
-
-                stats.innerText = `Total de pares cadastrados na Pionex: ${listaPares.length}`;
-                renderizarTabela(listaPares);
             } else {
-                tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Erro ao consultar API da Pionex.</td></tr>`;
+                select.innerHTML = "<option>Erro ao carregar pares</option>";
             }
-        } catch (error) {
-            console.error("Erro na requisição:", error);
-            tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Erro de conexão com a API da Pionex.</td></tr>`;
+        } catch (e) {
+            select.innerHTML = "<option>Erro de Conexão com API</option>";
         }
     }
 
-    function renderizarTabela(pares) {
-        const tbody = document.getElementById("tableBody");
-        tbody.innerHTML = "";
+    function executarSimulacao() {
+        const quedaInicial = parseFloat(document.getElementById("quedaAdicao").value);
+        const maxOrdens = parseInt(document.getElementById("maxOrdens").value);
+        const multPasso = parseFloat(document.getElementById("multPasso").value);
+        const alavancagem = parseFloat(document.getElementById("alavancagem").value);
 
-        // Exibe apenas os primeiros 50 itens para melhor performance
-        const limitePares = pares.slice(0, 50);
+        // Cálculo da Cobertura Teórica de Queda Total
+        let coberturaTotal = 0;
+        let passoAtual = quedaInicial;
 
-        limitePares.forEach(par => {
-            const preco = mapaPrecos[par.symbol] ? parseFloat(mapaPrecos[par.symbol]) : "N/A";
-            const minAmount = par.minAmount || "N/A";
+        for (let i = 0; i < maxOrdens; i++) {
+            coberturaTotal += passoAtual;
+            passoAtual *= multPasso;
+        }
 
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td><strong>${par.symbol}</strong></td>
-                <td>${par.baseCurrency}</td>
-                <td>${par.quoteCurrency}</td>
-                <td class="price">${preco}</td>
-                <td>${minAmount} ${par.baseCurrency}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        // Em futuros, o limite de margem depende da alavancagem
+        const limiteLiquidação = 100 / alavancagem;
 
-        if (pares.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Nenhum par encontrado.</td></tr>`;
+        document.getElementById("resCobertura").innerText = coberturaTotal.toFixed(2) + "%";
+
+        const elemStatus = document.getElementById("resStatus");
+        if (coberturaTotal >= limiteLiquidação && alavancagem > 1) {
+            elemStatus.className = "status-liquidado";
+            elemStatus.innerText = `Risco Alto de LIQUIDAÇÃO! (Margem máx com ${alavancagem}x é ${limiteLiquidação.toFixed(1)}%)`;
+        } else {
+            elemStatus.className = "status-ok";
+            elemStatus.innerText = "Configuração Segura dentro da margem estipulada.";
         }
     }
 
-    function filtrarPares() {
-        const query = document.getElementById("searchInput").value.toUpperCase();
-        const filtrados = listaPares.filter(p => 
-            p.symbol.toUpperCase().includes(query) ||
-            p.baseCurrency.toUpperCase().includes(query) ||
-            p.quoteCurrency.toUpperCase().includes(query)
-        );
-        renderizarTabela(filtrados);
-    }
-
-    window.onload = carregarDados;
+    window.onload = carregarParesFuturos;
 </script>
 
 </body>
